@@ -1,0 +1,48 @@
+ Если выключить в общих настройках "Расчет показателей", то они перестанут считаться совсем. 
+ Чтобы отключить не нужные показатели, то надо в карточке Показатель снять галочку "Включен" 
+ (аналогия - отправка уведомлений. есть процесс отправки, если его не запустить - то никакие уведомления не отправляются. но если его запустить - отправляться будут только активные уведомления)
+ 
+ Если в Общих настройках указать 20 мин, а в самом Показателе например 3 мин, то Показатель будет рассчитываться 1 раз в 20 мин.
+Если же в Показателе указать 33 мин, то по объяснению разработчика "срабатывать будет не чаще 33 мин"
+
+Это элемент шаблона и если вы зайдете на страницу портала <имя_сайта>/_wt/statistic_recs , то увидите список всех показателей. Если по показателю собирается статистика, то выбрав его можно ее посмотреть
+ 
+ Вот 4 запроса, далее буду вставлять только их номера:
+Запрос 1: SELECT count(*) FROM statistic_data
+Запрос 2: SELECT count(*) FROM [(spxml_objects)] WHERE form='statistic_data' AND is_deleted in (1,2)
+Запрос 3: SELECT count(*) FROM statistic_datas
+Запрос 4: SELECT count(*) FROM [(spxml_objects)] WHERE form='statistic_data'
+
+Формула 1 - валидность данных: Запрос 1 = Запрос 4
+Формула 2 - валидности каталогов (таблица с s на конце): Запрос 1 = Запрос 2 + Запрос 3
+Если Формула 1 = True, а Формула 2 = False, то необходимо перестроить каталог statistic_datas. 
+Ссылка на агент: https://news.websoft.ru/_wt/wiki_base/6677132170851611650/base_wiki_article_type_id/6676016887843534950/parent_id/6677103481188463876
+
+Агент:
+Прямо у вас в агенте написано вводить название каталога без s
+но statistic_data это же другая таблица?
+что все таки вводить statistic_datas или statistic_data?
+Сандлер Владимир Ильич
+Добрый день, Вячеслав. Все 3 таблицы взаимосвязаны. Указать надо statistic_data. 
+На основе данных в statistic_data и [(spxml_objects)] WHERE form='statistic_data' AND is_deleted in (1,2) он пересоздаст данные в statistic_datas
+
+================
+SELECT count(*) FROM statistic_data
+SELECT count(*) FROM [(spxml_objects)] WHERE form='statistic_data' AND is_deleted in (1,2)
+SELECT count(*) FROM statistic_datas
+SELECT count(*) FROM [(spxml_objects)] WHERE form='statistic_data'
+
+837386
+0
+837386
+838159
+С каталогами все в порядке. А вот с данными выходит нет.
+Т.к. в [(spxml_objects)] WHERE form='statistic_data' больше записей, то нестрашно. Можно удалить:
+DELETE FROM [(spxml_objects)] WHERE form='statistic_data' AND id not in (SELECT id FROM statistic_data)
+===============
+
+Владимир. Когда мы обсуждали чистку таблиц в каталогах от старых записей в https://news.websoft.ru/vchat/index.html#/conversation/7065191490507534312 вы ориентировали меня смотреть на колонку modification_date. Т.е. я смотрел на запросы
+select count(*) from dbo.[(spxml_objects)] where id in (select id from statistic_datas where modification_date < DATEADD(DAY, @Day, getDate()) )
+select count(*) from statistic_data where id in (select id from statistic_datas where modification_date < DATEADD(DAY, @Day, getDate()) )
+select count(*) from statistic_datas where modification_date < DATEADD(DAY, @Day, getDate())
+после отработки агента там везде дата и время отработки агента. Можно ориентироваться на колонку [creation_date] чтобы понять сколько там старых записей? Ответ - можно

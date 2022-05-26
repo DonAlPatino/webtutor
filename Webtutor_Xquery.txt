@@ -1,0 +1,4 @@
+А как правильно указать конкретную дату в запросе ("for $elem in learnings where $elem/last_usage_date > date('" + dStartDate+ "') and $elem/last_usage_date < date('" + dEndDate + "') return $elem");?
+XQuery("for $elem in active_learnings where $elem/last_usage_date > date('14.02.2022 00:00:00') return $elem")
+Лучше всего заранее привести переменную к нужному формату и подставлять ее:
+XQuery("for $elem in active_learnings where $elem/last_usage_date > "+ dStartDateb +" return $elem")
