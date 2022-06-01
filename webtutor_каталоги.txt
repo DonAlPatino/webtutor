@@ -1,0 +1,66 @@
+Проверка валидности каталогов базы WebSoft HCM
+https://news.websoft.ru/_wt/wiki_base/6693084684013166235/base_wiki_article_type_id/6680054725638828770/parent_id/6820708475239353158
+GetInvalidCatalogs.sql.
+
+Скрипт возвращает в результате работы список невалидных каталогов. Соответственно, пустой список является признаком того, что все каталоги валидны
+
+Теперь по 3-м запросам если скажем будет выведено сообщение, что каталог завершенных курсов не валиден
+
+select COUNT(*) from learnings
+select COUNT(*) from learning
+select COUNT(*) from learning l
+inner join [(spxml_objects)] so on l.id=so.id and so.is_deleted in (1,2)
+
+Каталог валиден если запрос 1 = запрос 2 минус запрос 3
+Обычно смотрят в какую сторону в плюс или минус идет расхождение и 
+смотрят количественные данные каталога и потом его перестраивают или не перестраивают 
+(все зависит, повторюсь от размера каталога 1-2 млн записей и т.д).
+
+InvalidCatalogCount.sql - скрипт для вывода данных каталога
+
+===========
+Вот 4 запроса, далее буду вставлять только их номера:
+Запрос 1: SELECT count(*) FROM statistic_data
+Запрос 2: SELECT count(*) FROM [(spxml_objects)] WHERE form='statistic_data' AND is_deleted in (1,2)
+Запрос 3: SELECT count(*) FROM statistic_datas
+Запрос 4: SELECT count(*) FROM [(spxml_objects)] WHERE form='statistic_data'
+
+Формула 1 - валидность данных: Запрос 1 = Запрос 4
+Формула 2 - валидности каталогов (таблица с s на конце): Запрос 1 = Запрос 2 + Запрос 3
+Если Формула 1 = True, а Формула 2 = False, то необходимо перестроить каталог statistic_datas. 
+Ссылка на агент: https://news.websoft.ru/_wt/wiki_base/6677132170851611650/base_wiki_article_type_id/6676016887843534950/parent_id/6677103481188463876
+
+<spxml_unibridge_config.xml>
+перестраивал каталог для показателей и Владимр Сандлер мне сказал что можно с <add key="UpgradeLocked" value="true" /> 
+т.к. структура БД при этом не меняется. Ну я и перестроил без изменения.
+Горлова Елена Юрьевна
+Cоглашусь, в данном конкретном случае использовании агента по перестройке каталога, 
+тк не меняется структура можно оставить и false, мы всегда стараемся перестраховаться 
+и у нас во всех инструкция по перестройке каталогов разными способами присутствует обязательность параметра UpgradeLocked false.
+
+Однако для event пришлось включить UpgradeLocked false
+Мораль - не сработало с true, ставим false, не сработало - лезем в xhttp-2022-06-01.log и ищем ошибки
+Напр гора ошибок в обьектах person_object_link не позволяла перестроить каталог
+
+Агент:
+Прямо у вас в агенте написано вводить название каталога без s
+но statistic_data это же другая таблица?
+что все таки вводить statistic_datas или statistic_data?
+Сандлер Владимир Ильич
+Добрый день, Вячеслав. Все 3 таблицы взаимосвязаны. Указать надо statistic_data. 
+На основе данных в statistic_data и [(spxml_objects)] WHERE form='statistic_data' AND is_deleted in (1,2) он пересоздаст данные в statistic_datas
+
+================
+SELECT count(*) FROM statistic_data
+SELECT count(*) FROM [(spxml_objects)] WHERE form='statistic_data' AND is_deleted in (1,2)
+SELECT count(*) FROM statistic_datas
+SELECT count(*) FROM [(spxml_objects)] WHERE form='statistic_data'
+
+837386
+0
+837386
+838159
+С каталогами все в порядке. А вот с данными выходит нет.
+Т.к. в [(spxml_objects)] WHERE form='statistic_data' больше записей, то нестрашно. Можно удалить:
+DELETE FROM [(spxml_objects)] WHERE form='statistic_data' AND id not in (SELECT id FROM statistic_data)
+===============
