@@ -1,0 +1,13 @@
+Write-Host "Infobase for clearing event log: $ibName"
+Write-Host "Event log path: $eventLogPath"            
+
+$eventLogPath = "$clusterRegPath\$ibGuid\1Cv8Log"
+$eventLogPathExists = Test-Path $eventLogPath -PathType Container
+if($eventLogPathExists -eq $true)
+{
+    $logFilesData = Get-ChildItem -Path $eventLogPath *.lgp -Force | 
+    Where-Object { !$_.PSIsContainer -and $_.CreationTime -lt $limit } 
+    Write-Host "Log files to remove:"
+                    $logFilesData                    
+                    $logFilesData | Remove-Item -Force
+}
